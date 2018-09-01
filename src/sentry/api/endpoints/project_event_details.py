@@ -9,6 +9,7 @@ from sentry.api.bases.project import ProjectEndpoint
 from sentry.api.serializers import serialize
 from sentry.models import Event
 from sentry.utils.apidocs import scenario, attach_scenarios
+from sentry.api.filters.response_wrapper import add_post_method
 
 
 @scenario('RetrieveEventForProject')
@@ -20,6 +21,7 @@ def retrieve_event_for_project_scenario(runner):
     )
 
 
+@add_post_method
 class ProjectEventDetailsEndpoint(ProjectEndpoint):
     doc_section = DocSection.EVENTS
 
