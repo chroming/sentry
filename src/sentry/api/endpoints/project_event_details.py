@@ -1,6 +1,8 @@
 from __future__ import absolute_import
 
 import six
+import logging
+from uuid import uuid4
 
 from rest_framework.response import Response
 
@@ -11,6 +13,7 @@ from sentry.models import Event
 from sentry.utils.apidocs import scenario, attach_scenarios
 from sentry.api.filters.response_wrapper import add_post_method
 
+delete_logger = logging.getLogger('sentry.deletions.api')
 
 @scenario('RetrieveEventForProject')
 def retrieve_event_for_project_scenario(runner):
@@ -86,3 +89,48 @@ class ProjectEventDetailsEndpoint(ProjectEndpoint):
             data['previousEventID'] = None
 
         return Response(data)
+
+    def delete(self, request, project, event_id):
+        """
+        Remove an Event
+        ```````````````
+
+        """
+        # from sentry.tasks.deletion import delete_event
+        try:
+            event = Event.objects.get(
+                event_id=event_id,
+                project_id=project.id,
+            )
+            # TODO: Since other api use apply_async
+            # for sending task to redis, this method
+            # should rewrite with apply_async.
+            event.delete()
+        except Event.DoesNotExist:
+            return Response({'detail': 'Event not found'}, status=404)
+
+        transaction_id = uuid4().hex
+        self.create_audit_entry(
+            request=request,
+            organization_id=project.organization_id if project else None,
+            target_object=event.id,
+            transaction_id=transaction_id,
+        )
+
+        delete_logger.info(
+            'object.delete.queued',
+            extra={
+                'object_id': event.id,
+                'transaction_id': transaction_id,
+                'model': type(event).__name__,
+            }
+        )
+        return Response(status=202)
+
+        # delete_event.apply_async(
+        #     kwargs={
+        #         'object_id': event.id,
+        #         'transaction_id': transaction_id,
+        #     },
+        #     countdown=3600,
+        # )

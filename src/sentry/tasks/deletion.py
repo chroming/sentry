@@ -268,6 +268,33 @@ def delete_group(object_id, transaction_id=None, **kwargs):
 
 
 @instrumented_task(
+    name='sentry.tasks.deletion.delete_event',
+    queue='cleanup',
+    default_retry_delay=60 * 5,
+    max_retries=MAX_RETRIES
+)
+@retry(exclude=(DeleteAborted, ))
+def delete_event(object_id, transaction_id=None, **kwargs):
+    from sentry import deletions
+    from sentry.models import Event
+
+    task = deletions.get(
+        model=Event,
+        query={
+            'id': object_id,
+        },
+        transaction_id=transaction_id or uuid4().hex,
+    )
+    has_more = task.chunk()
+    if has_more:
+        delete_event.apply_async(
+            kwargs={'object_id': object_id,
+                    'transaction_id': transaction_id},
+            countdown=15,
+        )
+
+
+@instrumented_task(
     name='sentry.tasks.deletion.delete_api_application',
     queue='cleanup',
     default_retry_delay=60 * 5,

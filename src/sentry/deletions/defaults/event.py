@@ -20,3 +20,6 @@ class EventDeletionTask(ModelDeletionTask):
         node_ids = [i.data.id for i in instance_list]
 
         return [BaseRelation({'nodes': node_ids}, NodeDeletionTask)]
+
+    def delete_instance(self, instance):
+        return super(EventDeletionTask, self).delete_instance(instance)
