@@ -1,11 +1,22 @@
 
+"""
+The entry point to run sentry with source code.
+The real entry points are in src/sentry/run_source/
+
+Usage:
+
+> python run.py -m server
+> python run.py -m worker
+
+"""
+
 import os
 import sys
 
 import click
 
 sys.path.insert(0, os.path.join(os.getcwd(), 'src'))
-from sentry.run_source import run_server, run_simple_server, run_works
+from sentry.run_source import run_server, run_simple_server, run_works, run_install_static
 
 
 @click.command()
