@@ -9,9 +9,8 @@ from rest_framework.response import Response
 from sentry.api.base import DocSection
 from sentry.api.bases.project import ProjectEndpoint
 from sentry.api.serializers import serialize
-from sentry.models import Event
+from sentry.models import Event, Group, GroupStatus
 from sentry.utils.apidocs import scenario, attach_scenarios
-from sentry.api.filters.response_wrapper import add_post_method
 
 delete_logger = logging.getLogger('sentry.deletions.api')
 
@@ -24,7 +23,6 @@ def retrieve_event_for_project_scenario(runner):
     )
 
 
-@add_post_method
 class ProjectEventDetailsEndpoint(ProjectEndpoint):
     doc_section = DocSection.EVENTS
 
@@ -98,6 +96,7 @@ class ProjectEventDetailsEndpoint(ProjectEndpoint):
         """
         # from sentry.tasks.deletion import delete_event
         try:
+
             event = Event.objects.get(
                 event_id=event_id,
                 project_id=project.id,
@@ -106,6 +105,20 @@ class ProjectEventDetailsEndpoint(ProjectEndpoint):
             # for sending task to redis, this method
             # should rewrite with apply_async.
             event.delete()
+
+            group = Group.objects.filter(
+                id=event.group_id,
+            ).exclude(status__in=[
+                GroupStatus.PENDING_DELETION,
+                GroupStatus.DELETION_IN_PROGRESS,
+            ]).first()
+            times_seen = group.times_seen
+            if times_seen > 0:
+                group.update(times_seen=times_seen - 1)
+                if times_seen == 1:
+                    group.delete()
+            else:
+                group.delete()
         except Event.DoesNotExist:
             return Response({'detail': 'Event not found'}, status=404)
 
