@@ -49,7 +49,7 @@ class GroupEventsEndpoint(GroupEndpoint, EnvironmentMixin):
             )
 
         events = Event.objects.filter(group_id=group.id)
-
+        group.update(times_seen=len(events))
         try:
             environment = self._get_environment_from_request(
                 request,
