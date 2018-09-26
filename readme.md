@@ -39,7 +39,7 @@ just change method "GET" to "POST" and choice one post body: "remove":{key:true}
 or "save":{key:true} (for leave only some key)
 
 
-If you want to change the response in GET method, you can add a wrapper like this:
+If you want to change the response in GET method, you can add a wrapper to endpoint like this:
 
 ```python
 from sentry.api.filters.response_wrapper import change_data_keys 
@@ -56,5 +56,10 @@ Class Endpoint():
 
 ```
 
+### Others
+
++ Now the issue's events count in web will autocorrect with event real count when use /api/0/issues/{issue_id}/events/ api;
+
++ If you want to run sentry source code, you can use: `python run.py -m module_name`, module_name can be server/work/simple_server .
 
 Original sentry [readme](README.rst)
